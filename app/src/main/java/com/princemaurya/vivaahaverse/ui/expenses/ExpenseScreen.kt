@@ -1,5 +1,6 @@
 package com.princemaurya.vivaahaverse.ui.expenses
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -53,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.princemaurya.vivaahaverse.data.model.Expense
@@ -61,6 +65,7 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +87,7 @@ fun ExpenseScreen(
     var endDateFilter by remember { mutableStateOf("") }
     var startDateError by remember { mutableStateOf<String?>(null) }
     var endDateError by remember { mutableStateOf<String?>(null) }
+    var showFilters by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.errorMessage, uiState.successMessage) {
         var consumed = false
@@ -152,64 +158,100 @@ fun ExpenseScreen(
                 )
             }
 
-            FilterSection(
-                category = categoryFilter,
-                startDate = startDateFilter,
-                endDate = endDateFilter,
-                startDateError = startDateError,
-                endDateError = endDateError,
-                onCategoryChange = { categoryFilter = it },
-                onStartDateChange = {
-                    startDateFilter = it
-                    startDateError = null
-                },
-                onEndDateChange = {
-                    endDateFilter = it
-                    endDateError = null
-                },
-                onApplyFilters = {
-                    val (startError, endError) = validateFilterDates(startDateFilter, endDateFilter)
-                    startDateError = startError
-                    endDateError = endError
-                    if (startError == null && endError == null) {
-                        val category = categoryFilter.ifBlank { null }
-                        val start = startDateFilter.ifBlank { null }
-                        val end = endDateFilter.ifBlank { null }
-                        viewModel.loadExpenses(category = category, startDate = start, endDate = end)
-                    }
-                },
-                onClearFilters = {
-                    categoryFilter = ""
-                    startDateFilter = ""
-                    endDateFilter = ""
-                    startDateError = null
-                    endDateError = null
-                    viewModel.loadExpenses(category = null, startDate = null, endDate = null)
-                }
-            )
-
             uiState.summary?.let { summary ->
                 DashboardSection(summary = summary) { amount ->
                     currencyFormatter.format(amount)
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            ExpenseList(
-                expenses = uiState.expenses,
-                formatCurrency = { amount -> currencyFormatter.format(amount) },
+            Card(
                 modifier = Modifier
                     .weight(1f, fill = true)
-                    .fillMaxWidth(),
-                onEdit = { expense ->
-                    editingExpense = expense
-                    showDialog = true
-                },
-                onDelete = { expense ->
-                    expensePendingDelete = expense
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "All expenses",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(onClick = { showFilters = !showFilters }) {
+                            Text(text = if (showFilters) "Hide filters" else "Apply filter")
+                        }
+                    }
+
+                    if (showFilters) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        FilterSection(
+                            category = categoryFilter,
+                            startDate = startDateFilter,
+                            endDate = endDateFilter,
+                            startDateError = startDateError,
+                            endDateError = endDateError,
+                            onCategoryChange = { categoryFilter = it },
+                            onStartDateChange = {
+                                startDateFilter = it
+                                startDateError = null
+                            },
+                            onEndDateChange = {
+                                endDateFilter = it
+                                endDateError = null
+                            },
+                            onApplyFilters = {
+                                val (startError, endError) = validateFilterDates(startDateFilter, endDateFilter)
+                                startDateError = startError
+                                endDateError = endError
+                                if (startError == null && endError == null) {
+                                    val category = categoryFilter.ifBlank { null }
+                                    val start = startDateFilter.ifBlank { null }
+                                    val end = endDateFilter.ifBlank { null }
+                                    viewModel.loadExpenses(category = category, startDate = start, endDate = end)
+                                    showFilters = false
+                                }
+                            },
+                            onClearFilters = {
+                                categoryFilter = ""
+                                startDateFilter = ""
+                                endDateFilter = ""
+                                startDateError = null
+                                endDateError = null
+                                viewModel.loadExpenses(category = null, startDate = null, endDate = null)
+                                showFilters = false
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ExpenseList(
+                        expenses = uiState.expenses,
+                        formatCurrency = { amount -> currencyFormatter.format(amount) },
+                        modifier = Modifier
+                            .weight(1f, fill = true)
+                            .fillMaxWidth(),
+                        onEdit = { expense ->
+                            editingExpense = expense
+                            showDialog = true
+                        },
+                        onDelete = { expense ->
+                            expensePendingDelete = expense
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 
@@ -257,92 +299,79 @@ private fun FilterSection(
     onApplyFilters: () -> Unit,
     onClearFilters: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Filters",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val categories = listOf("All", "Food", "Travel", "Shopping", "Bills", "Other")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                categories.forEach { option ->
-                    val isSelected = if (option == "All") category.isBlank() else category == option
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            if (option == "All") {
-                                onCategoryChange("")
-                            } else {
-                                onCategoryChange(option)
-                            }
-                        },
-                        label = { Text(option) },
-                        leadingIcon = if (isSelected) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null
-                                )
-                            }
+    Column {
+        val categories = listOf("All", "Food", "Travel", "Shopping", "Bills", "Other")
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            categories.forEach { option ->
+                val isSelected = if (option == "All") category.isBlank() else category == option
+                FilterChip(
+                    selected = isSelected,
+                    onClick = {
+                        if (option == "All") {
+                            onCategoryChange("")
                         } else {
-                            null
+                            onCategoryChange(option)
                         }
-                    )
-                }
+                    },
+                    label = { Text(option) },
+                    leadingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                )
             }
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = startDate,
-                onValueChange = onStartDateChange,
-                label = { Text("Start date (YYYY-MM-DD)") },
-                isError = startDateError != null,
-                supportingText = {
-                    startDateError?.let {
-                        Text(text = it, color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = endDate,
-                onValueChange = onEndDateChange,
-                label = { Text("End date (YYYY-MM-DD)") },
-                isError = endDateError != null,
-                supportingText = {
-                    endDateError?.let {
-                        Text(text = it, color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                TextButton(onClick = onClearFilters) {
-                    Text(text = "Reset")
+        OutlinedTextField(
+            value = startDate,
+            onValueChange = onStartDateChange,
+            label = { Text("Start date (YYYY-MM-DD)") },
+            isError = startDateError != null,
+            supportingText = {
+                startDateError?.let {
+                    Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
-                Button(onClick = onApplyFilters) {
-                    Text(text = "Apply filters")
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = endDate,
+            onValueChange = onEndDateChange,
+            label = { Text("End date (YYYY-MM-DD)") },
+            isError = endDateError != null,
+            supportingText = {
+                endDateError?.let {
+                    Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            TextButton(onClick = onClearFilters) {
+                Text(text = "Reset")
+            }
+            Button(onClick = onApplyFilters) {
+                Text(text = "Apply")
             }
         }
     }
@@ -363,14 +392,30 @@ private fun DashboardSection(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Spending overview",
+                text = "Total spent",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = formatCurrency(total),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Divider()
             Spacer(modifier = Modifier.height(12.dp))
 
+            Text(
+                text = "Spending by category",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (perCategory.isEmpty()) {
-                Text(text = "Start adding expenses to see trends.")
+                Text(text = "Start adding expenses to see category breakdown.")
             } else {
                 perCategory.forEach { (category, amount) ->
                     CategorySpendRow(
@@ -382,18 +427,6 @@ private fun DashboardSection(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
-
-            Divider()
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Total spent",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = formatCurrency(total),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
@@ -550,6 +583,24 @@ private fun AddEditExpenseDialog(
     var dateError by remember { mutableStateOf<String?>(null) }
     var categoryError by remember { mutableStateOf<String?>(null) }
 
+    val context = LocalContext.current
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val calendar = remember { Calendar.getInstance() }
+
+    val datePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                calendar.set(year, month, dayOfMonth)
+                date = dateFormatter.format(calendar.time)
+                dateError = null
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
     fun validate(): Boolean {
         var isValid = true
 
@@ -643,7 +694,10 @@ private fun AddEditExpenseDialog(
 
                 OutlinedTextField(
                     value = date,
-                    onValueChange = { date = it },
+                    onValueChange = {
+                        date = it
+                        dateError = null
+                    },
                     label = { Text("Date (YYYY-MM-DD)") },
                     isError = dateError != null,
                     supportingText = {
@@ -651,36 +705,56 @@ private fun AddEditExpenseDialog(
                             Text(text = it, color = MaterialTheme.colorScheme.error)
                         }
                     },
+                    trailingIcon = {
+                        IconButton(onClick = { datePickerDialog.show() }) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Pick date"
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val categories = listOf("Food", "Travel", "Shopping", "Bills", "Other")
+                val allCategories = listOf("Food", "Travel", "Shopping", "Bills", "Other")
                 var expanded by remember { mutableStateOf(false) }
+                val filteredCategories = allCategories.filter {
+                    category.isBlank() || it.contains(category, ignoreCase = true)
+                }
 
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = category,
-                        onValueChange = {},
+                        onValueChange = {
+                            category = it
+                            categoryError = null
+                            expanded = true
+                        },
                         label = { Text("Category") },
                         isError = categoryError != null,
-                        readOnly = true,
                         supportingText = {
                             categoryError?.let {
                                 Text(text = it, color = MaterialTheme.colorScheme.error)
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { expanded = true }
+                        trailingIcon = {
+                            IconButton(onClick = { expanded = !expanded }) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Select category"
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     DropdownMenu(
-                        expanded = expanded,
+                        expanded = expanded && filteredCategories.isNotEmpty(),
                         onDismissRequest = { expanded = false }
                     ) {
-                        categories.forEach { option ->
+                        filteredCategories.forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option) },
                                 onClick = {

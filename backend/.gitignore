@@ -31,3 +31,4 @@ build/
 *.pem
 *.p12
 /.cache
+/backend/.env
