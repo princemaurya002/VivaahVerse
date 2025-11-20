@@ -62,7 +62,7 @@ object ExpenseApiClient {
 
     // 10.0.2.2 is the host loopback address for Android emulators
     //private const val BASE_URL = "http://10.0.2.2:3000/"
-    private const val BASE_URL = "https://vivaahverse-backend.onrender.com"
+    private const val BASE_URL = "https://vivaahverse-backend.onrender.com/"
 
     private val authInterceptor = Interceptor { chain ->
         val builder = chain.request().newBuilder()

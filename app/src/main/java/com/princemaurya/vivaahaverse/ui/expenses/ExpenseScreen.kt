@@ -88,6 +88,7 @@ fun ExpenseScreen(
     var startDateError by remember { mutableStateOf<String?>(null) }
     var endDateError by remember { mutableStateOf<String?>(null) }
     var showFilters by remember { mutableStateOf(false) }
+    val hasActiveFilters = categoryFilter.isNotBlank() || startDateFilter.isNotBlank() || endDateFilter.isNotBlank()
 
     LaunchedEffect(uiState.errorMessage, uiState.successMessage) {
         var consumed = false
@@ -182,18 +183,46 @@ fun ExpenseScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "All expenses",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        TextButton(onClick = { showFilters = !showFilters }) {
-                            Text(text = if (showFilters) "Hide filters" else "Apply filter")
+                        Column {
+                            Text(
+                                text = "All expenses",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (hasActiveFilters) {
+                                Text(
+                                    text = "Filters applied",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (hasActiveFilters) {
+                                TextButton(
+                                    onClick = {
+                                        categoryFilter = ""
+                                        startDateFilter = ""
+                                        endDateFilter = ""
+                                        startDateError = null
+                                        endDateError = null
+                                        showFilters = false
+                                        viewModel.loadExpenses(category = null, startDate = null, endDate = null)
+                                    }
+                                ) {
+                                    Text(text = "Reset filter")
+                                }
+                            }
+
+                            TextButton(onClick = { showFilters = !showFilters }) {
+                                Text(text = if (showFilters) "Hide filters" else "Apply filter")
+                            }
                         }
                     }
 
                     if (showFilters) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         FilterSection(
                             category = categoryFilter,
@@ -403,7 +432,7 @@ private fun DashboardSection(
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Divider()
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -510,10 +539,10 @@ private fun ExpenseItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(vertical = 4.dp)
             .clickable { onEdit(expense) }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

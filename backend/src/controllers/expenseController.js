@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Expense } from '../models/Expense.js';
 
 const validateExpenseInput = (data, isUpdate = false) => {
@@ -120,23 +121,26 @@ export const getExpenses = async (req, res) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const filter = { userId };
+    // Filters for the expense list (respect category/date + user)
+    const expensesFilter = { userId };
 
     if (category) {
-      filter.category = category;
+      expensesFilter.category = category;
     }
 
     if (startDate || endDate) {
-      filter.date = {};
-      if (startDate) filter.date.$gte = new Date(startDate);
-      if (endDate) filter.date.$lte = new Date(endDate);
+      expensesFilter.date = {};
+      if (startDate) expensesFilter.date.$gte = new Date(startDate);
+      if (endDate) expensesFilter.date.$lte = new Date(endDate);
     }
 
-    const expenses = await Expense.find(filter).sort({ date: -1 });
+    const expenses = await Expense.find(expensesFilter).sort({ date: -1 });
 
+    // Summary should always represent totals for the full history of this user,
+    // independent of any category/date filters applied to the list.
     if (includeSummary === 'true') {
       const summaryPipeline = [
-        { $match: filter },
+        { $match: { userId: new mongoose.Types.ObjectId(userId) } },
         {
           $group: {
             _id: '$category',
